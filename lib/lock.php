@@ -39,6 +39,9 @@ class Lock {
 	/** @var string $locksDir Lock directory */
 	protected static $locksDir = '';
 
+        /** @var string localStorageType local storage type */
+	protected static $localStorageType = '';
+
 	/** @var string $path Filename of the file as represented in storage */
 	protected $path;
 
@@ -63,7 +66,13 @@ class Lock {
 	 * @param string $path Absolute pathname for a local file on which to obtain a lock
 	 */
 	public function __construct($path) {
-		$this->path = Filesystem::normalizePath($path, true, true);
+                self::$localStorageType = $systemConfig->getValue("localstoragetype","Local");
+		if (self::$localStorageType != 'Local'){
+		    $this->path = $path;
+		}
+		else{
+		    $this->path = Filesystem::normalizePath($this->storage->getLocalFile($path), true, true);
+		}
 		$this->log = \OC::$server->getLogger();
 	}
 
@@ -295,7 +304,12 @@ class Lock {
 	public static function getLockFile($filename) {
 		if (!self::$locksDir) {
 			$dataDir = \OC::$server->getConfig()->getSystemValue('datadirectory');
-			self::$locksDir = $dataDir . '/.locks';
+                        if (self::$localStorageType != 'Local'){
+			    self::$locksDir = 'localceph://'.$dataDir . '/.locks';
+			}
+			else{
+			    self::$locksDir = $dataDir . '/.locks'; 
+			}
 		}
 
 		if (!file_exists(self::$locksDir)) {
